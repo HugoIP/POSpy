@@ -13,7 +13,7 @@ class Product:
         self.wind.title('vNovaPOS App')
 
         # Creating a Frame Container 
-        frame = LabelFrame(self.wind, text = 'Agregar nuevo producto')
+        frame = LabelFrame(self.wind, text = 'Buscar')
         frame.grid(row = 0, column = 0, columnspan = 5, pady = 20)
 
         # barcode Input
@@ -53,6 +53,7 @@ class Product:
 
         # Filling the Rows
         self.get_products()
+        self.wind.bind('<Return>', self.find_product)
 
     # Function to Execute Database Querys
     def run_query(self, query, parameters = ()):
@@ -61,6 +62,24 @@ class Product:
             result = cursor.execute(query, parameters)
             conn.commit()
         return result
+
+
+    # Find product
+    def find_product(self,event):
+    	# cleaning Table 
+    	 
+        records = self.tree.get_children()
+        for element in records:
+            self.tree.delete(element)
+        # getting data
+        query = 'SELECT * FROM product WHERE barcode='+self.barcode.get()
+        db_rows = self.run_query(query)
+        # filling data
+        for row in db_rows:
+            self.tree.insert('', 0, text = row[1], values = (row[2],row[3])) 
+		# Clean barcode field
+        self.barcode.delete(0, END)
+
 
     # Get Products from Database
     def get_products(self):
@@ -74,7 +93,7 @@ class Product:
         # filling data
         for row in db_rows:
             self.tree.insert('', 0, text = row[1], values = (row[2],row[3])) 
-     # Get Products from Database
+
    
 
     # User Input Validation
