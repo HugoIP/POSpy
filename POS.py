@@ -6,6 +6,11 @@ import sqlite3
 class Product:
     # connection dir property
     db_name = 'database.db'
+    # Array product like row i ticket
+    product_array=[]
+    # Array ticket lki procuct array
+    ticket=[]
+    optionlist=[]
 
     def __init__(self, window):
         # Initializations 
@@ -23,18 +28,20 @@ class Product:
         self.barcode.grid(row = 1, column = 1)
 
         # Name Input
-        Label(frame, text = 'Name: ').grid(row = 2, column =0)
+        Label(frame, text = 'Find: ').grid(row = 2, column =0)
         self.name = Entry(frame)
         self.name.focus()
         self.name.grid(row = 2, column = 1)
 
         # Price Input
-        Label(frame, text = 'Price: ').grid(row = 3, column = 0)
-        self.price = Entry(frame)
+        # Label(frame, text = 'Price: ').grid(row = 3, column = 0)
+        self.price = Entry(frame,width=30)
         self.price.grid(row = 3, column = 1)
+        self.optionDisplay=ttk.Combobox(self.price,width=30,state='readonly')
+        self.optionDisplay.place(x=0,y=0)
 
         # Button Add Product 
-        ttk.Button(frame, text = 'Save Product', command = self.add_product).grid(row = 4, columnspan = 2, sticky = W + E)
+        #ttk.Button(frame, text = 'Save Product', command = self.add_product).grid(row = 4, columnspan = 2, sticky = W + E)
         # Output Messages 
         self.message = Label(text = '', fg = 'red')
         self.message.grid(row = 4, column = 0, columnspan = 2, sticky = W + E)
@@ -46,39 +53,115 @@ class Product:
         self.tree.heading('nm', text = 'Name', anchor = CENTER)
         self.tree.heading('pc', text = 'Price', anchor = CENTER)
         
-
+         # Price Input
+        Label(frame, text = 'Total: ').grid(row = 6, column = 0)
+        self.sum = Entry(frame)
+        self.sum.grid(row = 6, column = 3)
+        self.sum.insert(0,str("0.0"))
         # Buttons
-        ttk.Button(text = 'DELETE', command = self.delete_product).grid(row = 6, column = 0, sticky = W + E)
-        ttk.Button(text = 'EDIT', command = self.edit_product).grid(row = 6, column = 1, sticky = W + E)
+        #ttk.Button(text = 'DELETE', command = self.delete_product).grid(row = 7, column = 0, sticky = W + E)
+        #ttk.Button(text = 'EDIT', command = self.edit_product).grid(row = 7, column = 1, sticky = W + E)
 
         # Filling the Rows
         self.get_products()
-        self.wind.bind('<Return>', self.find_product)
+        self.barcode.bind('<Return>', self.find_product_by_code)
+        self.name.bind('<Return>', self.get_product_by_code)
+        self.name.bind("<KeyRelease>", self.find_product_by_name)
 
     # Function to Execute Database Querys
     def run_query(self, query, parameters = ()):
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
-            result = cursor.execute(query, parameters)
-            conn.commit()
-        return result
+            #catch error in parametters try?
+            try:
+            	result = cursor.execute(query, parameters)
+            	conn.commit()
+            	return result
 
+            except Exception as e:
+            	#message for error in db
+            	return []
+           
+    def get_product_by_code(self,event):
+    	# Clean combobox
+    	print(self.optionDisplay.current())
+    	#print(self.optionlist[self.optionDisplay.current()])
+    	self.optionDisplay['values']=[]
+
+    def find_product_by_name(self,event):
+    	# cleaning Table 
+    	if self.name.get()!="":
+	        records = self.tree.get_children()
+	        #for element in records:
+	            #self.tree.delete(element)
+	        # getting data
+	        db_rows=[]
+	        with sqlite3.connect(self.db_name) as conn2:
+	        	cursor2 = conn2.cursor()
+	        	db_rows  = cursor2.execute('SELECT * FROM product WHERE name LIKE ?',(f'%'+str(self.name.get())+'%',))
+	        	conn2.commit()
+	        optionlist=[]
+	        # filling data on array
+	        for row in db_rows:
+	        	optionlist.append("$ "+str(row[3])+"  "+str(row[2])+"            "+str(row[1]))
+	        	#self.tree.insert('', 0, text = row[1], values = (row[2],row[3]))
+	        try:
+	        	self.optionDisplay['values']=[]
+	        except Exception as e:
+	        	print(" problem to delete combobox ")
+
+	        if len(optionlist)!=0:
+		        self.optionDisplay['values']=optionlist
+		        self.optionDisplay.set(optionlist[0])
+	        #self.product_array.append(row)
+	        # filling data
+	        #count=len(self.product_array);
+	        #total=0.0
+
+	        #for rowlist in self.product_array:
+	        	#total+=float(rowlist[3])
+	        	#self.tree.insert('', 0, text = (str(count)+"     " + rowlist[1]), values = (rowlist[2],rowlist[3]))
+	        	#count-=1
+
+	        #self.tree.insert('', 0, text = "     ", values = ("",total))
+	        #self.sum.delete(0,END)
+	        #self.sum.insert(0,total)
+
+			# Clean barcode field
+	        #self.barcode.delete(0, END)
 
     # Find product
-    def find_product(self,event):
+    def find_product_by_code(self,event):
     	# cleaning Table 
-    	 
-        records = self.tree.get_children()
-        for element in records:
-            self.tree.delete(element)
-        # getting data
-        query = 'SELECT * FROM product WHERE barcode='+self.barcode.get()
-        db_rows = self.run_query(query)
-        # filling data
-        for row in db_rows:
-            self.tree.insert('', 0, text = row[1], values = (row[2],row[3])) 
-		# Clean barcode field
-        self.barcode.delete(0, END)
+    	if self.barcode.get()!="":
+	        records = self.tree.get_children()
+	        for element in records:
+	            self.tree.delete(element)
+	        # getting data
+	        query = 'SELECT * FROM product WHERE barcode='+self.barcode.get()
+	        db_rows = self.run_query(query)
+	        # filling data on array
+	        for row in db_rows:
+	            #self.tree.insert('', 0, text = row[1], values = (row[2],row[3]))
+	            self.product_array.append(row)
+	        # filling data
+	        count=len(self.product_array);
+	        total=0.0
+
+	        for rowlist in self.product_array:
+	        	total+=float(rowlist[3])
+	        	self.tree.insert('', 0, text = (str(count)+"     " + rowlist[1]), values = (rowlist[2],rowlist[3]))
+	        	count-=1
+
+	        #self.tree.insert('', 0, text = "     ", values = ("",total))
+	        self.sum.delete(0,END)
+	        self.sum.insert(0,total)
+
+			# Clean barcode field
+	        self.barcode.delete(0, END)
+
+    # Get total to sell    
+
 
 
     # Get Products from Database
@@ -88,7 +171,7 @@ class Product:
         for element in records:
             self.tree.delete(element)
         # getting data
-        query = 'SELECT * FROM product ORDER BY barcode DESC'
+        query = 'SELECT * FROM product ORDER BY id DESC'
         db_rows = self.run_query(query)
         # filling data
         for row in db_rows:
